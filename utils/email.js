@@ -1,32 +1,33 @@
-const nodemailer = require("nodemailer");
+const nodeMailer = require("nodemailer");
 
 const sendEmail = async (email, subject, text) => {
+  const transporter = nodeMailer.createTransport({
+    service: "gmail",
+    host: process.env.HOST,
+    port: 465,
+    secure: true,
+    secureConnection: false,
+    auth: {
+      user: process.env.USER,
+      pass: process.env.PASS,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
+  const mailOptions = {
+    from: process.env.USER,
+    to: email,
+    subject: subject,
+    text: text,
+  };
   try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.HOST,
-      // service: process.env.SERVICE,
-      port: 587,
-      secure: true,
-      secureConnection: false, // TLS requires secureConnection to be false
-      auth: {
-        user: process.env.USER,
-        pass: process.env.PASS,
-      },
-      tls: {
-        ciphers: "SSLv3",
-      },
-    });
-
-    await transporter.sendMail({
-      from: process.env.USER,
-      to: email,
-      subject: subject,
-      text: text,
-    });
-    console.log("email sent successfully");
+    // Send the email
+    await transporter.sendMail(mailOptions);
+    console.log("Email sent successfully.");
   } catch (error) {
-    console.log("email not sent");
-    console.log(error);
+    console.error("Error sending email:", error);
+    throw new Error("Failed to send email.");
   }
 };
 

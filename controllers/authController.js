@@ -12,6 +12,7 @@ const register = async (req, res) => {
 
   try {
     const userExists = await User.findOne({ email });
+
     if (userExists) {
       return res.status(400).json({ message: "User already exists" });
     }
@@ -27,10 +28,9 @@ const register = async (req, res) => {
       }),
     });
 
-    const message = `${process.env.BASE_URL}/user/verify/${user.id}/${token.token}`;
+    const message = `${process.env.BASE_URL}/user/verify/${user._id}/${token.token}`;
     await sendEmail(user.email, "Verify Email", message);
 
-    // res.send("An Email sent to your account please verify");
     res
       .status(201)
       .json({ message: "An Email sent to your account please verify" });
@@ -50,10 +50,11 @@ const verify = async (req, res) => {
     });
     if (!token) return res.status(400).send("Invalid link");
 
-    await User.updateOne({ _id: user._id, verified: true });
-    await Token.findByIdAndRemove(token._id);
+    await User.updateOne({ _id: user._id }, { isVerified: true });
 
-    res.send("email verified successfully");
+    await token.deleteOne();
+
+    res.status(200).send("email verified successfully");
   } catch (error) {
     res.status(400).send("An error occurred");
   }
@@ -82,7 +83,6 @@ const login = async (req, res) => {
 
 const forgetPassword = async (req, res) => {
   const { email } = req.body;
-
   try {
     const user = await User.findOne({ email });
     if (!user) {
