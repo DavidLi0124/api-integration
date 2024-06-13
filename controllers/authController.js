@@ -20,7 +20,7 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ email, password: hashedPassword });
 
-    // send confirmation email logic here
+    // MAKING TOKEN
     let token = await Token.create({
       userId: user._id,
       token: jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
@@ -28,6 +28,7 @@ const register = async (req, res) => {
       }),
     });
 
+    // SENDEMAIL
     const message = `${process.env.BASE_URL}/user/verify/${user._id}/${token.token}`;
     await sendEmail(user.email, "Verify Email", message);
 
@@ -85,15 +86,19 @@ const forgetPassword = async (req, res) => {
   const { email } = req.body;
   try {
     const user = await User.findOne({ email });
+
+    // USER DOESN'T EXIST
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
+    // CREATE AND SAVE NEW PASSWORD
     const newPassword = Math.random().toString(36).slice(-8);
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedPassword;
     await user.save();
 
+    // SENDEMAIL
     await sendEmail(user.email, "New Password", newPassword);
 
     return res.status(200).json({
