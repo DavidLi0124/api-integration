@@ -109,4 +109,28 @@ const forgetPassword = async (req, res) => {
   }
 };
 
-module.exports = { register, login, verify, forgetPassword };
+const resendEmail = async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    const userExists = await User.findOne({ email });
+
+    if (!userExists) {
+      return res.status(400).json({ message: "Register again." });
+    }
+
+    const token = await Token.findOne({ userId: userExists._id });
+
+    // SENDEMAIL
+    const message = `${process.env.BASE_URL}/user/verify/${userExists._id}/${token.token}`;
+    await sendEmail(userExists.email, "Verify Email", message);
+
+    res
+      .status(201)
+      .json({ message: "An Email sent to your account please verify" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+module.exports = { register, login, verify, forgetPassword, resendEmail };

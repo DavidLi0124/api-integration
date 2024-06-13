@@ -5,6 +5,10 @@ const authRoutes = require("./authRoutes");
 const dataRoutes = require("./dataRoutes");
 const campaignRoutes = require("./campaignRoutes");
 const crmRoutes = require("./crmRoutes");
+const googleRoutes = require("./googleRoutes");
+
+// USE GOOGLE APIS
+router.use("/auth/google", googleRoutes);
 
 // USE ROUTE MODULES
 router.use("/auth", authRoutes);
