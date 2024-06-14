@@ -6,7 +6,7 @@ const { generateToken } = require("../utils/token");
 
 const register = async (req, res) => {
   const { error } = validate(req.body);
-  if (error) return res.status(400).send(error.details[0].message);
+  if (error) res.status(400).send(error.details[0].message);
 
   const { email, password } = req.body;
 
@@ -14,7 +14,7 @@ const register = async (req, res) => {
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
+      res.status(400).json({ message: "User already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -24,11 +24,11 @@ const register = async (req, res) => {
     let token = await generateToken(user);
 
     // SENDEMAIL
-    const message = `${process.env.BASE_URL}/user/verify/${user._id}/${token.token}`;
+    const message = `${process.env.SERVER_URL}/auth/verify/${user._id}/${token.token}`;
     await sendEmail(user.email, "Verify Email", message);
 
     res
-      .status(201)
+      .status(200)
       .json({ message: "An Email sent to your account please verify" });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
@@ -38,13 +38,13 @@ const register = async (req, res) => {
 const verify = async (req, res) => {
   try {
     const user = await User.findOne({ _id: req.params.id });
-    if (!user) return res.status(400).send("Invalid link");
+    if (!user) res.status(400).send("Invalid link");
 
     const token = await Token.findOne({
       userId: user._id,
       token: req.params.token,
     });
-    if (!token) return res.status(400).send("Invalid link");
+    if (!token) res.status(400).send("Invalid link");
 
     await User.updateOne({ _id: user._id }, { isVerified: true });
     await token.deleteOne();
@@ -61,12 +61,12 @@ const login = async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      res.status(400).json({ message: "Invalid credentials" });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      res.status(400).json({ message: "Invalid credentials" });
     }
 
     const { token } = await Token.findOne({ userId: user._id });
@@ -76,27 +76,55 @@ const login = async (req, res) => {
   }
 };
 
+const resetPassword = async (req, res) => {
+  const { password } = req.body;
+  if (!password) res.status(400).json({ message: "Invalid password" });
+  try {
+    const token = await Token.findOne({
+      userId: req.params.id,
+      token: req.params.token,
+    });
+    if (!token) {
+      res.status(400).json({ message: "Invalid credentials" });
+    }
+    if (token.token === req.params.token) {
+      const user = await User.findOne({ _id: req.params.id });
+      user.password = await bcrypt.hash(password, 10);
+      await user.save();
+    } else {
+      res.status(400).json({ message: "Invalid token" });
+    }
+    res.status(200).json({ message: "Password reset correctly" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
 const forgetPassword = async (req, res) => {
   const { email } = req.body;
   try {
     const user = await User.findOne({ email });
-
-    // USER DOESN'T EXIST
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // CREATE AND SAVE NEW PASSWORD
-    const newPassword = Math.random().toString(36).slice(-8);
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    await user.save();
+    let token = await Token.findOne({ userId: user._id });
+    console.log("1", token);
+    if (!token) {
+      res.status(400).json({ message: "Invalid credentials" });
+    }
 
-    // SENDEMAIL
-    await sendEmail(user.email, "New Password", newPassword);
+    token.deleteOne();
+    token = await generateToken(user);
+    console.log("2", token);
+    await token.save();
 
-    return res.status(200).json({
-      message: "New password sent to your email. Please check your email",
+    // SEND EMAIL WITH RESET PASSWORD FORM
+    const message = `${process.env.SERVER_URL}/auth/resetpassword/${user._id}/${token.token}`;
+    await sendEmail(user.email, "Enter New Password", message);
+
+    res.status(200).json({
+      message: "Password reset form was sent to email",
     });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
@@ -107,27 +135,39 @@ const resendEmail = async (req, res) => {
   const { email } = req.params;
 
   try {
-    const userExists = await User.findOne({ email });
+    const user = await User.findOne({ email });
 
-    if (!userExists) {
-      return res.status(400).json({ message: "Register again." });
+    if (!user) {
+      res.status(400).json({ message: "Register again." });
     }
 
     // REGENERATE TOKEN
-    let token = await Token.findOne({ userId: userExists._id });
-    if (token) await token.deleteOne();
-    token = await generateToken(userExists);
+    let token = await Token.findOne({ userId: user._id });
+    if (!token) {
+      res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    token.deleteOne();
+    token = await generateToken(user);
+    await token.save();
 
     // SENDEMAIL
-    const message = `${process.env.BASE_URL}/user/verify/${userExists._id}/${token.token}`;
-    await sendEmail(userExists.email, "Verify Email", message);
+    const message = `${process.env.SERVER_URL}/auth/verify/${user._id}/${token.token}`;
+    await sendEmail(user.email, "Verify Email", message);
 
     res
-      .status(201)
+      .status(200)
       .json({ message: "An Email sent to your account please verify" });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
 };
 
-module.exports = { register, login, verify, forgetPassword, resendEmail };
+module.exports = {
+  register,
+  login,
+  verify,
+  forgetPassword,
+  resendEmail,
+  resetPassword,
+};
