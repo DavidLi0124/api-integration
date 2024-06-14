@@ -12,35 +12,26 @@ passport.use(
       callbackURL: process.env.CALLBACK_URL,
       passReqToCallback: true,
     },
-    function (request, accessToken, refreshToken, profile, done) {
-      User.findOne({
-        googleId: profile.id,
-      })
-        .then(async (user) => {
-          if (!user) {
-            const newPassword = Math.random().toString(36).slice(-8);
-            const hashedPassword = await bcrypt.hash(newPassword, 10);
-            user = new User({
-              googleId: profile.id,
-              email: profile.emails[0].value,
-              password: hashedPassword,
-              isVerified: profile.emails[0].verified,
-            });
-            user
-              .save()
-              .then(() => {
-                return done(null, user);
-              })
-              .catch((err) => {
-                return done(err);
-              });
-          } else {
-            return done(null, user);
-          }
-        })
-        .catch((err) => {
-          return done(err);
+    async function (request, accessToken, refreshToken, profile, done) {
+      try {
+        let user = await User.findOne({
+          googleId: profile.id,
         });
+        if (!user) {
+          const newPassword = Math.random().toString(36).slice(-8);
+          const hashedPassword = await bcrypt.hash(newPassword, 10);
+          user = new User({
+            googleId: profile.id,
+            email: profile.emails[0].value,
+            password: hashedPassword,
+            isVerified: profile.emails[0].verified,
+          });
+          await user.save();
+        }
+        return done(null, user);
+      } catch (error) {
+        return done(error);
+      }
     }
   )
 );
