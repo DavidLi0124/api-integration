@@ -2,7 +2,7 @@ const sendEmail = require("../utils/email");
 const Token = require("../models/Token");
 const { User, validate } = require("../models/User");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+const { generateToken } = require("../utils/token");
 
 const register = async (req, res) => {
   const { error } = validate(req.body);
@@ -21,12 +21,7 @@ const register = async (req, res) => {
     const user = await User.create({ email, password: hashedPassword });
 
     // MAKING TOKEN
-    let token = await Token.create({
-      userId: user._id,
-      token: jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-        expiresIn: "1h",
-      }),
-    });
+    let token = await generateToken(user);
 
     // SENDEMAIL
     const message = `${process.env.BASE_URL}/user/verify/${user._id}/${token.token}`;
@@ -52,7 +47,6 @@ const verify = async (req, res) => {
     if (!token) return res.status(400).send("Invalid link");
 
     await User.updateOne({ _id: user._id }, { isVerified: true });
-
     await token.deleteOne();
 
     res.status(200).send("email verified successfully");
@@ -119,7 +113,10 @@ const resendEmail = async (req, res) => {
       return res.status(400).json({ message: "Register again." });
     }
 
-    const token = await Token.findOne({ userId: userExists._id });
+    // REGENERATE TOKEN
+    let token = await Token.findOne({ userId: userExists._id });
+    if (token) await token.deleteOne();
+    token = await generateToken(userExists);
 
     // SENDEMAIL
     const message = `${process.env.BASE_URL}/user/verify/${userExists._id}/${token.token}`;
