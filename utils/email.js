@@ -1,5 +1,23 @@
 const nodeMailer = require("nodemailer");
 
+const writeVerifyEmail = (url) =>
+  `
+    <h2>Verify your email</h2>
+    <p>Click the link below to verify your email address:</p>
+    <a href="${url}">Verify</a>
+  `;
+
+const writeResetPasswordEmail = (url) =>
+  `
+    <h2>Reset Password</h2>
+    <p>Click the button below to reset your password:</p>
+    <form method="post" action="${url}">
+        <label for="password">New Password</label>
+        <input type="password" id="password" name="password" placeholder="Enter New Password" required />
+        <input type="submit" value="Reset Password" />
+    </form> 
+  `;
+
 const sendEmail = async (email, subject, text) => {
   const transporter = nodeMailer.createTransport({
     service: "gmail",
@@ -19,7 +37,7 @@ const sendEmail = async (email, subject, text) => {
     from: process.env.USER,
     to: email,
     subject: subject,
-    text: text,
+    html: text,
   };
   try {
     // Send the email
@@ -29,4 +47,4 @@ const sendEmail = async (email, subject, text) => {
   }
 };
 
-module.exports = sendEmail;
+module.exports = { sendEmail, writeVerifyEmail, writeResetPasswordEmail };
