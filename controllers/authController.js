@@ -104,7 +104,7 @@ const resetPassword = async (req, res) => {
   }
 };
 
-const forgetPassword = async (req, res) => {
+const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email });
@@ -170,7 +170,7 @@ module.exports = {
   register,
   login,
   verify,
-  forgetPassword,
+  forgotPassword,
   resendEmail,
   resetPassword,
 };
