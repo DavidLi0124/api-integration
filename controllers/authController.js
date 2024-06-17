@@ -5,15 +5,13 @@ const {
   writeVerifyEmail,
   writeResetPasswordEmail,
 } = require("../utils/email");
-const Token = require("../models/Token");
 const { User, validate } = require("../models/User");
 const { generateToken, verifyToken } = require("../utils/token");
 
 const register = async (req, res) => {
-  const { error } = validate(req.body);
-  if (error) return res.status(400).send(error.details[0].message);
-
   try {
+    const { error } = validate(req.body);
+    if (error) return res.status(400).send(error.details[0].message);
     const { email, password } = req.body;
     const userExists = await User.findOne({ email });
 
@@ -43,8 +41,7 @@ const register = async (req, res) => {
 
 const verify = async (req, res) => {
   try {
-    const { user } = await verifyToken(req.params.token);
-    console.log(user);
+    const user = await verifyToken(req.params.token);
     if (!user || user._id !== req.params.id)
       return res.status(400).send("Invalid link");
 
@@ -80,12 +77,20 @@ const login = async (req, res) => {
 const resetPassword = async (req, res) => {
   try {
     const { password } = req.body;
+    console.log(password, req.params);
     if (!password) return res.status(400).json({ message: "Invalid password" });
 
     const user = await verifyToken(req.params.token);
-    if (!user) return res.status(400).json({ message: "Invalid link" });
-    user.password = await bcrypt.hash(password, 10);
-    await user.save();
+    console.log(user);
+    if (!user || user._id !== req.params.id) {
+      return res.status(400).json({ message: "Invalid link" });
+    }
+    await User.updateOne(
+      { _id: user._id },
+      {
+        password: await bcrypt.hash(password, 10),
+      }
+    );
 
     return res
       .status(200)

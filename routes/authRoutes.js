@@ -15,6 +15,6 @@ router.get("/verify/:id/:token", verify);
 router.post("/login", login);
 router.post("/forgotpassword", forgotPassword);
 router.post("/resetpassword/:id/:token", resetPassword);
-router.post("/resend/:email", resendEmail);
+router.put("/resend/:email", resendEmail);
 
 module.exports = router;

@@ -14,7 +14,7 @@ const generateToken = async (user) => {
 const verifyToken = async (token) => {
   console.log(token);
   try {
-    const user = await jwt.verify(token, process.env.JWT_SECRET);
+    const { user } = await jwt.verify(token, process.env.JWT_SECRET);
     return user;
   } catch (error) {
     throw new Error(error);
