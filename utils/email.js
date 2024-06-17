@@ -10,12 +10,8 @@ const writeVerifyEmail = (url) =>
 const writeResetPasswordEmail = (url) =>
   `
     <h2>Reset Password</h2>
-    <p>Click the button below to reset your password:</p>
-    <form method="post" action="${url}">
-        <label for="password">New Password</label>
-        <input type="password" id="password" name="password" placeholder="Enter New Password" required />
-        <input type="submit" value="Reset Password" />
-    </form> 
+    <p>Click the link below to reset your password:</p>
+    <a href="${url}">Reset Password</a>
   `;
 
 const sendEmail = async (email, subject, text) => {

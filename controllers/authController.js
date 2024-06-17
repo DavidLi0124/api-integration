@@ -1,3 +1,5 @@
+const bcrypt = require("bcrypt");
+
 const {
   sendEmail,
   writeVerifyEmail,
@@ -5,8 +7,7 @@ const {
 } = require("../utils/email");
 const Token = require("../models/Token");
 const { User, validate } = require("../models/User");
-const bcrypt = require("bcrypt");
-const { generateToken } = require("../utils/token");
+const { generateToken, verifyToken } = require("../utils/token");
 
 const register = async (req, res) => {
   const { error } = validate(req.body);
@@ -24,11 +25,11 @@ const register = async (req, res) => {
     const user = await User.create({ email, password: hashedPassword });
 
     // MAKING TOKEN
-    let token = await generateToken(user);
+    const token = await generateToken(user);
 
     // SENDEMAIL
     const message = writeVerifyEmail(
-      `${process.env.SERVER_URL}/auth/verify/${user._id}/${token.token}`
+      `${process.env.SERVER_URL}/auth/verify/${user._id}/${token}`
     );
     await sendEmail(user.email, "Verify Email", message);
 
@@ -42,17 +43,12 @@ const register = async (req, res) => {
 
 const verify = async (req, res) => {
   try {
-    const user = await User.findOne({ _id: req.params.id });
-    if (!user) return res.status(400).send("Invalid link");
-
-    const token = await Token.findOne({
-      userId: user._id,
-      token: req.params.token,
-    });
-    if (!token) return res.status(400).send("Invalid link");
+    const { user } = await verifyToken(req.params.token);
+    console.log(user);
+    if (!user || user._id !== req.params.id)
+      return res.status(400).send("Invalid link");
 
     await User.updateOne({ _id: user._id }, { isVerified: true });
-
     return res.redirect(`${process.env.CLIENT_URL}`);
   } catch (error) {
     return res.status(400).send("An error occurred");
@@ -66,14 +62,16 @@ const login = async (req, res) => {
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
-
+    if (!user.isVerified) {
+      return res.status(400).json({ message: "Verify Email." });
+    }
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    const { token } = await Token.findOne({ userId: user._id });
-    if (token) res.json({ token, user });
+    const token = await generateToken(user);
+    return res.status(200).json({ token, user });
   } catch (error) {
     return res.status(500).json({ message: "Server error", error });
   }
@@ -83,22 +81,15 @@ const resetPassword = async (req, res) => {
   try {
     const { password } = req.body;
     if (!password) return res.status(400).json({ message: "Invalid password" });
-    console.log(password);
-    const token = await Token.findOne({
-      userId: req.params.id,
-      token: req.params.token,
-    });
-    if (!token) {
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
-    if (token.token === req.params.token) {
-      const user = await User.findOne({ _id: req.params.id });
-      user.password = await bcrypt.hash(password, 10);
-      await user.save();
-    } else {
-      return res.status(400).json({ message: "Invalid token" });
-    }
-    return res.redirect(`${process.env.CLIENT_URL}`);
+
+    const user = await verifyToken(req.params.token);
+    if (!user) return res.status(400).json({ message: "Invalid link" });
+    user.password = await bcrypt.hash(password, 10);
+    await user.save();
+
+    return res
+      .status(200)
+      .json({ message: "Password was reset successfully." });
   } catch (error) {
     return res.status(500).json({ message: "Server error", error });
   }
@@ -112,23 +103,16 @@ const forgotPassword = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    let token = await Token.findOne({ userId: user._id });
-    if (!token) {
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
-
-    token.deleteOne();
-    token = await generateToken(user);
-    await token.save();
+    const token = await generateToken(user);
 
     // SEND EMAIL WITH RESET PASSWORD FORM
     const message = writeResetPasswordEmail(
-      `${process.env.SERVER_URL}/auth/resetpassword/${user._id}/${token.token}`
+      `${process.env.CLIENT_URL}/resetpassword/${user._id}/${token}`
     );
     await sendEmail(user.email, "Enter New Password", message);
 
     return res.status(200).json({
-      message: "Password reset form was sent to email",
+      message: "Password reset mail was sent.",
     });
   } catch (error) {
     return res.status(500).json({ message: "Server error", error });
@@ -144,18 +128,10 @@ const resendEmail = async (req, res) => {
       return res.status(400).json({ message: "Register again." });
     }
 
-    // REGENERATE TOKEN
-    let token = await Token.findOne({ userId: user._id });
-    if (!token) {
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
-
-    token.deleteOne();
-    token = await generateToken(user);
-    await token.save();
+    const token = await generateToken(user);
 
     // SENDEMAIL
-    const message = `${process.env.SERVER_URL}/auth/verify/${user._id}/${token.token}`;
+    const message = `${process.env.SERVER_URL}/auth/verify/${user._id}/${token}`;
     await sendEmail(user.email, "Verify Email", message);
 
     res

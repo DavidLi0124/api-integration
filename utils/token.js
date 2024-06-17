@@ -1,13 +1,9 @@
 const jwt = require("jsonwebtoken");
-const Token = require("../models/Token");
 
 const generateToken = async (user) => {
   try {
-    const token = await Token.create({
-      userId: user._id,
-      token: jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-        expiresIn: "1h",
-      }),
+    const token = await jwt.sign({ user: user }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
     });
     return token;
   } catch (error) {
@@ -15,4 +11,14 @@ const generateToken = async (user) => {
   }
 };
 
-module.exports = { generateToken };
+const verifyToken = async (token) => {
+  console.log(token);
+  try {
+    const user = await jwt.verify(token, process.env.JWT_SECRET);
+    return user;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+module.exports = { generateToken, verifyToken };

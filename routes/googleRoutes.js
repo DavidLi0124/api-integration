@@ -25,11 +25,8 @@ router.get("/success", async (req, res) => {
   if (!user) {
     return;
   }
-  let token = await Token.findOne({ userId: user._id });
-  if (!token) {
-    token = await generateToken(user);
-  }
-  res.status(200).send({ token: token.token, user });
+  const token = await generateToken(user);
+  res.status(200).send({ token, user });
 });
 
 router.get("/failure", (req, res) => {

@@ -11,10 +11,10 @@ const {
 const router = express.Router();
 
 router.post("/register", register);
-router.post("/login", login);
 router.get("/verify/:id/:token", verify);
+router.post("/login", login);
 router.post("/forgotpassword", forgotPassword);
 router.post("/resetpassword/:id/:token", resetPassword);
-router.put("/resend/:email", resendEmail);
+router.post("/resend/:email", resendEmail);
 
 module.exports = router;
