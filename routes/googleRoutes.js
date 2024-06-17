@@ -2,7 +2,6 @@ const express = require("express");
 const passport = require("passport");
 const router = express.Router();
 
-const Token = require("../models/Token");
 const { generateToken } = require("../utils/token");
 
 router.get(
@@ -26,11 +25,11 @@ router.get("/success", async (req, res) => {
     return;
   }
   const token = await generateToken(user);
-  res.status(200).send({ token, user });
+  return res.redirect(`${process.env.CLIENT_URL}/?token=${token}&user=${user}`);
 });
 
 router.get("/failure", (req, res) => {
-  res.status(400).send({ message: "Google Authentication Failure" });
+  return res.status(400).send({ message: "Google Authentication Failure" });
 });
 
 module.exports = router;
