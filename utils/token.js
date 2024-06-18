@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 
 const generateToken = async (user) => {
   try {
-    const token = await jwt.sign({ user: user }, process.env.JWT_SECRET, {
+    const token = await jwt.sign({ user }, process.env.JWT_SECRET, {
       expiresIn: "1h",
     });
     return token;
@@ -12,9 +12,8 @@ const generateToken = async (user) => {
 };
 
 const verifyToken = async (token) => {
-  console.log(token);
   try {
-    const { user } = await jwt.verify(token, process.env.JWT_SECRET);
+    const user = await jwt.verify(token, process.env.JWT_SECRET);
     return user;
   } catch (error) {
     throw new Error(error);

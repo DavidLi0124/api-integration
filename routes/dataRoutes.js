@@ -1,10 +1,9 @@
-const express = require('express');
-const { getData, addData } = require('../controllers/dataController');
-
+const express = require("express");
 const router = express.Router();
 
-router.get('/', getData);
-router.post('/', addData);
+const { upload } = require("../config/multer");
+const { uploadFiles } = require("../controllers/dataController");
+
+router.post("/upload", upload.array("files"), uploadFiles);
 
 module.exports = router;
-
