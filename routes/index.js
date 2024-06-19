@@ -3,8 +3,8 @@ const router = express.Router();
 
 const authRoutes = require("./authRoutes");
 const dataRoutes = require("./dataRoutes");
-const campaignRoutes = require("./campaignRoutes");
-const crmRoutes = require("./crmRoutes");
+const projectRoutes = require("./projectRoutes");
+
 const googleRoutes = require("./googleRoutes");
 const appleRoutes = require("./appleRoutes");
 
@@ -19,7 +19,6 @@ router.use("/auth/apple", appleRoutes);
 // USE ROUTE MODULES
 router.use("/auth", authRoutes);
 router.use("/data", authMiddleware, dataRoutes);
-router.use("/campaign", authMiddleware, campaignRoutes);
-router.use("/crm", authMiddleware, crmRoutes);
+router.use("/project", authMiddleware, projectRoutes);
 
 module.exports = router;

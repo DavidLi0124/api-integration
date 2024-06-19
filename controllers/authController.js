@@ -32,7 +32,7 @@ const register = async (req, res) => {
     await sendEmail(user.email, "Verify Email", message);
 
     res
-      .status(200)
+      .status(201)
       .json({ message: "An Email sent to your account. please verify" });
   } catch (error) {
     return res.status(500).json({ message: "Server error", error });
